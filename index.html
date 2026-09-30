@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Operação Imunização - Escape Room</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --neon-blue: #00f3ff;
+            --neon-green: #39ff14;
+            --neon-red: #ff003c;
+            --dark-bg: #0b0c10;
+            --panel-bg: rgba(31, 40, 51, 0.85);
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--dark-bg);
+            color: #c5c6c7;
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(0, 243, 255, 0.08), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(57, 255, 20, 0.05), transparent 25%);
+            overflow-x: hidden;
+            user-select: none;
+        }
+
+        h1, h2, h3, .orbitron {
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        .glass-panel {
+            background: var(--panel-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 243, 255, 0.3);
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.1);
+            border-radius: 12px;
+        }
+
+        .neon-text-blue {
+            color: var(--neon-blue);
+            text-shadow: 0 0 5px var(--neon-blue), 0 0 10px var(--neon-blue);
+        }
+        
+        .neon-text-green {
+            color: var(--neon-green);
+            text-shadow: 0 0 5px var(--neon-green);
+        }
+
+        .neon-border {
+            border-color: var(--neon-blue);
+            box-shadow: 0 0 8px rgba(0, 243, 255, 0.5);
+        }
+
+        .btn-sci {
+            background: transparent;
+            border: 1px solid var(--neon-blue);
+            color: var(--neon-blue);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-sci:hover {
+            background: rgba(0, 243, 255, 0.2);
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.6);
+        }
+
+        .btn-sci:active {
+            transform: scale(0.98);
+        }
+
+        .btn-sci.locked {
+            border-color: var(--neon-red);
+            color: var(--neon-red);
+            cursor: not-allowed;
+        }
+
+        .btn-sci.locked:hover {
+            background: rgba(255, 0, 60, 0.1);
+            box-shadow: 0 0 15px rgba(255, 0, 60, 0.4);
+        }
+
+        .vaccine-item {
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+        
+        .vaccine-item:hover {
+            transform: translateY(-2px);
+            border-color: var(--neon-blue);
+        }
+
+        .vaccine-item.selected {
+            background: rgba(0, 243, 255, 0.3);
+            border-color: var(--neon-blue);
+            box-shadow: 0 0 10px var(--neon-blue);
+        }
+
+        .vaccine-item.matched {
+            opacity: 0.5;
+            cursor: default;
+            filter: grayscale(100%);
+            pointer-events: none;
+            border-color: var(--neon-green);
+        }
+
+        .category-box {
+            border: 2px dashed rgba(255, 255, 255, 0.2);
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        
+        .category-box:hover, .category-box.highlight {
+            border-color: var(--neon-blue);
+            background: rgba(0, 243, 255, 0.05);
+        }
+
+        .category-box.correct-flash {
+            border-color: var(--neon-green);
+            background: rgba(57, 255, 20, 0.2);
+            box-shadow: 0 0 15px rgba(57, 255, 20, 0.5);
+        }
+
+        .category-box.error-flash {
+            border-color: var(--neon-red);
+            background: rgba(255, 0, 60, 0.2);
+            box-shadow: 0 0 15px rgba(255, 0, 60, 0.5);
+        }
+
+        .scanline {
+            width: 100%;
+            height: 100px;
+            background: linear-gradient(0deg, rgba(0,0,0,0) 0%, rgba(0,243,255,0.2) 50%, rgba(0,0,0,0) 100%);
+            opacity: 0.1;
+            position: absolute;
+            bottom: 100%;
+            animation: scanline 8s linear infinite;
+            pointer-events: none;
+            z-index: 50;
+        }
+
+        @keyframes scanline {
+            0% { bottom: 100%; }
+            100% { bottom: -100px; }
+        }
+
+        .glitch {
+            animation: glitch 1s linear infinite;
+        }
+
+        @keyframes glitch {
+            2%, 64% { transform: translate(2px,0) skew(0deg); }
+            4%, 60% { transform: translate(-2px,0) skew(0deg); }
+            62% { transform: translate(0,0) skew(5deg); }
+        }
+
+        .hidden-screen { display: none !important; }
+        
+        /* Modal customizado */
+        .custom-modal {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.8);
+            display: flex; justify-content: center; align-items: center; z-index: 100;
+        }
+    </style>
+</head>
+<body class="min-h-screen relative flex flex-col items-center justify-center p-4">
+    <div class="scanline"></div>
+
+    <section id="screen-login" class="w-full max-w-md glass-panel p-8 flex flex-col items-center">
+        <div class="mb-6 text-center">
+            <svg class="w-16 h-16 mx-auto text-[var(--neon-red)] mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+            <h1 class="text-3xl orbitron neon-text-blue uppercase">Acesso Restrito</h1>
+            <p class="text-sm mt-2">Protocolo Imunologia - Nível de Biossegurança 4</p>
+        </div>
+
+        <div class="w-full mb-6">
+            <label class="block text-xs uppercase tracking-widest text-[var(--neon-blue)] mb-2">Insira o código do caso de Imunodeficiências:</label>
+            <div class="flex gap-2 justify-center">
+                <input type="password" maxlength="1" class="pin-input w-12 h-16 text-center text-2xl orbitron bg-black border border-[var(--neon-blue)] text-[var(--neon-blue)] focus:outline-none focus:box-shadow-neon rounded" data-index="0">
+                <input type="password" maxlength="1" class="pin-input w-12 h-16 text-center text-2xl orbitron bg-black border border-[var(--neon-blue)] text-[var(--neon-blue)] focus:outline-none focus:box-shadow-neon rounded" data-index="1">
+                <input type="password" maxlength="1" class="pin-input w-12 h-16 text-center text-2xl orbitron bg-black border border-[var(--neon-blue)] text-[var(--neon-blue)] focus:outline-none focus:box-shadow-neon rounded" data-index="2">
+                <input type="password" maxlength="1" class="pin-input w-12 h-16 text-center text-2xl orbitron bg-black border border-[var(--neon-blue)] text-[var(--neon-blue)] focus:outline-none focus:box-shadow-neon rounded" data-index="3">
+            </div>
+            <p id="login-error" class="text-[var(--neon-red)] text-xs mt-2 text-center h-4"></p>
+        </div>
+
+        <button id="btn-unlock" class="btn-sci w-full py-3 rounded font-bold">Autenticar</button>
+    </section>
+
+    <section id="screen-intro" class="w-full max-w-3xl glass-panel p-8 hidden-screen">
+        <h1 class="text-4xl orbitron neon-text-blue text-center mb-6 glitch">Operação Imunização</h1>
+        
+        <div class="bg-black/50 p-6 rounded border border-[var(--neon-blue)] mb-6 text-lg leading-relaxed">
+            <p class="mb-4 text-[var(--neon-red)] font-bold orbitron">ALERTA SISTÊMICO: BANCO DE VACINAS CORROMPIDO.</p>
+            <p class="mb-4">Sua equipe de imunologistas conseguiu acessar o terminal. No entanto, os registros que ligam as vacinas aos seus respectivos <strong>mecanismos imunológicos</strong> foram desorganizados.</p>
+            <p class="mb-4"><strong>MISSÃO:</strong> Reconstruir o protocolo de imunização antes que a campanha nacional comece. Você deve correlacionar corretamente as vacinas às suas bases de preparação.</p>
+            <p class="text-[var(--neon-green)] text-sm italic">Dica: Preste atenção. Algumas vacinas têm propósitos parecidos, mas sua tecnologia de produção (mecanismo) é totalmente diferente.</p>
+        </div>
+
+        <button id="btn-start-phase1" class="btn-sci w-full py-4 rounded font-bold text-xl">Iniciar Reconstrução (Fase 1)</button>
+    </section>
+
+    <section id="screen-phase1" class="w-full max-w-6xl glass-panel p-4 md:p-8 hidden-screen flex flex-col h-[90vh]">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-2xl orbitron neon-text-blue">Fase 1: Classificação Estrutural</h2>
+            <div class="text-xl orbitron bg-black/50 px-4 py-2 rounded border border-[var(--neon-blue)]">
+                Restantes: <span id="vaccines-left" class="text-[var(--neon-green)]">11</span>
+            </div>
+        </div>
+        
+        <p class="text-sm mb-4">Selecione uma vacina no painel superior e, em seguida, clique no mecanismo correspondente no painel inferior.</p>
+
+        <!-- Container das vacinas -->
+        <div class="bg-black/40 p-4 rounded-xl border border-gray-700 mb-6 flex-1 overflow-y-auto">
+            <div id="vaccine-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                <!-- Injetado via JS -->
+            </div>
+        </div>
+
+        <!-- Container das Categorias (Mecanismos) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 h-auto md:h-48">
+            <div class="category-box bg-black/60 rounded-xl p-4 flex flex-col items-center justify-center text-center group" data-category="genetico">
+                <svg class="w-8 h-8 mb-2 text-purple-400 group-hover:text-[var(--neon-blue)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                <h3 class="font-bold text-sm text-purple-300">Material Genético</h3>
+                <p class="text-xs text-gray-400 mt-1">(RNAm)</p>
+            </div>
+            
+            <div class="category-box bg-black/60 rounded-xl p-4 flex flex-col items-center justify-center text-center group" data-category="subunidade">
+                <svg class="w-8 h-8 mb-2 text-blue-400 group-hover:text-[var(--neon-blue)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5"></path></svg>
+                <h3 class="font-bold text-sm text-blue-300">Subunidade</h3>
+                <p class="text-xs text-gray-400 mt-1">(Recombinante, Conjugada, Toxoide, VLP)</p>
+            </div>
+
+            <div class="category-box bg-black/60 rounded-xl p-4 flex flex-col items-center justify-center text-center group" data-category="inativado">
+                <svg class="w-8 h-8 mb-2 text-gray-400 group-hover:text-[var(--neon-blue)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path></svg>
+                <h3 class="font-bold text-sm text-gray-300">Microrganismo Inativado</h3>
+                <p class="text-xs text-gray-400 mt-1">("Morto")</p>
+            </div>
+
+            <div class="category-box bg-black/60 rounded-xl p-4 flex flex-col items-center justify-center text-center group" data-category="atenuado">
+                <svg class="w-8 h-8 mb-2 text-green-400 group-hover:text-[var(--neon-blue)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+                <h3 class="font-bold text-sm text-green-300">Microrganismo Atenuado</h3>
+                <p class="text-xs text-gray-400 mt-1">("Enfraquecido")</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="screen-phase2" class="w-full max-w-4xl glass-panel p-8 hidden-screen">
+        <h2 class="text-3xl orbitron neon-text-blue mb-2 text-center">Fase 2: Análise Funcional</h2>
+        <p class="text-center text-sm mb-8 text-gray-400">Banco de dados parcialmente restaurado. Processe as 5 vacinas restantes respondendo às questões técnicas.</p>
+
+        <div class="flex justify-between items-center mb-4 text-xs font-bold uppercase tracking-wider">
+            <span class="text-gray-400">Progresso da Análise</span>
+            <span id="quiz-counter" class="text-[var(--neon-green)]">1 / 5</span>
+        </div>
+        
+        <!-- Barra de progresso -->
+        <div class="w-full bg-gray-800 rounded-full h-2.5 mb-6">
+            <div id="quiz-progress" class="bg-[var(--neon-blue)] h-2.5 rounded-full" style="width: 20%"></div>
+        </div>
+
+        <div id="quiz-container" class="bg-black/50 p-6 rounded-lg border border-gray-700">
+            <!-- Questões injetadas via JS -->
+        </div>
+    </section>
+
+    <section id="screen-victory" class="w-full max-w-2xl glass-panel p-10 hidden-screen text-center flex flex-col items-center">
+        <div class="w-24 h-24 rounded-full border-4 border-[var(--neon-green)] flex items-center justify-center mb-6 shadow-[0_0_20px_#39ff14]">
+            <svg class="w-12 h-12 text-[var(--neon-green)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+        </div>
+        <h1 class="text-4xl orbitron text-[var(--neon-green)] mb-4 neon-text-green">SISTEMA RESTAURADO</h1>
+        <p class="text-xl mb-6">Operação Imunização concluída com sucesso!</p>
+        <p class="mb-8 text-gray-400">O protocolo de vacinação foi organizado e salvo. A campanha nacional já pode ser iniciada com total segurança, os mecanismos imunológicos estão correlacionados perfeitamente.</p>
+        <div class="orbitron text-2xl tracking-widest text-[var(--neon-blue)] p-4 border border-[var(--neon-blue)] rounded">
+            CÓDIGO DE SAÍDA: <span class="text-white font-bold">V-MEMÓRIA</span>
+        </div>
+    </section>
+
+    <!-- Custom Modal para Feedback -->
+    <div id="custom-modal" class="custom-modal hidden">
+        <div class="glass-panel p-6 max-w-sm w-full text-center relative border-t-4" id="modal-content">
+            <h3 id="modal-title" class="text-xl orbitron mb-2"></h3>
+            <p id="modal-message" class="mb-6"></p>
+            <button id="modal-btn" class="btn-sci py-2 px-6 rounded text-sm w-full">Continuar</button>
+        </div>
+    </div>
+
+    <script>
+        // ---------------------------------------------------------
+        // DADOS DO JOGO
+        // ---------------------------------------------------------
+        const SENHA_CORRETA = "4233";
+
+        // Fase 1: 11 Vacinas para classificar
+        const vacinasFase1 = [
+            { id: 'v1', nome: 'COVID-19 Comirnaty', desc: '(Pfizer)', categoria: 'genetico' },
+            { id: 'v2', nome: 'Meningo B', desc: 'Antígeno', categoria: 'subunidade' },
+            { id: 'v3', nome: 'Meningocócica ACWY', desc: 'Conjugada', categoria: 'subunidade' },
+            { id: 'v4', nome: 'Hepatite B', desc: 'Recombinante', categoria: 'subunidade' },
+            { id: 'v5', nome: 'HPV', desc: 'VLP', categoria: 'subunidade' },
+            { id: 'v6', nome: 'dT adulto', desc: 'Toxoide', categoria: 'subunidade' },
+            { id: 'v7', nome: 'Influenza', desc: 'Gripe', categoria: 'inativado' },
+            { id: 'v8', nome: 'Raiva', desc: 'Antirrábica', categoria: 'inativado' },
+            { id: 'v9', nome: 'Poliomielite VIP', desc: 'Salk', categoria: 'inativado' },
+            { id: 'v10', nome: 'Hepatite A', desc: 'Vírus inteiro', categoria: 'inativado' },
+            { id: 'v11', nome: 'BCG', desc: 'Tuberculose', categoria: 'atenuado' }
+        ];
+
+        // Fase 2: 5 Vacinas restantes no formato de Quiz
+        const quizFase2 = [
+            {
+                vacina: "Rotavírus humano",
+                pergunta: "A vacina contra o Rotavírus é de administração oral. Sabendo que ela mimetiza a infecção natural no trato gastrointestinal para gerar forte resposta local (IgA), qual o seu mecanismo estrutural?",
+                opcoes: [
+                    { texto: "Subunidade (Toxoide).", correta: false },
+                    { texto: "Microrganismo vivo atenuado.", correta: true },
+                    { texto: "Material genético (Vetor Viral).", correta: false },
+                    { texto: "Microrganismo inativado.", correta: false }
+                ],
+                feedback: "Correto! Vacinas atenuadas imitam bem a infecção natural. A via oral estimula a imunidade de mucosa."
+            },
+            {
+                vacina: "Febre Amarela",
+                pergunta: "O imunizante contra Febre Amarela confere proteção duradoura, geralmente após dose única (ou com um reforço). A cepa utilizada (17DD) é obtida por cultivo seriado que reduz sua virulência. Qual a classificação dessa vacina?",
+                opcoes: [
+                    { texto: "Microrganismo vivo atenuado.", correta: true },
+                    { texto: "RNA mensageiro.", correta: false },
+                    { texto: "Subunidade recombinante.", correta: false },
+                    { texto: "Vírus Inativado.", correta: false }
+                ],
+                feedback: "Exato! É um vírus vivo atenuado. Por isso não é indicada rotineiramente para imunodeprimidos ou gestantes."
+            },
+            {
+                vacina: "Tetraviral (Sarampo, Caxumba, Rubéola, Varicela)",
+                pergunta: "Para garantir uma resposta imunológica celular e humoral robusta contra estes quatro vírus sem causar a doença clínica grave, qual princípio é utilizado nesta formulação mista?",
+                opcoes: [
+                    { texto: "Proteínas de superfície conjugadas.", correta: false },
+                    { texto: "Todos os quatro vírus inativados quimicamente.", correta: false },
+                    { texto: "Quatro tipos de vírus vivos atenuados.", correta: true },
+                    { texto: "Toxoides virais purificados.", correta: false }
+                ],
+                feedback: "Correto! As vacinas combinadas virais costumam juntar cepas atenuadas, estimulando excelente memória imunológica."
+            },
+            {
+                vacina: "COVID-19 AstraZeneca",
+                pergunta: "Diferente da vacina Comirnaty (RNAm puro), a vacina da AstraZeneca utiliza um adenovírus de chimpanzé, que não se replica no corpo humano, para entregar o material genético da proteína Spike. Este mecanismo é classificado como:",
+                opcoes: [
+                    { texto: "Subunidade VLP (Virus-like particle).", correta: false },
+                    { texto: "Microrganismo atenuado de SARS-CoV-2.", correta: false },
+                    { texto: "Conjugada polissacarídica.", correta: false },
+                    { texto: "Vetor viral.", correta: true }
+                ],
+                feedback: "Perfeito! O adenovírus age como um 'vetor' ou 'veículo' para o material genético."
+            },
+            {
+                vacina: "Pneumo-10",
+                pergunta: "Crianças pequenas (menores de 2 anos) têm dificuldade em montar resposta imune contra a cápsula de polissacarídeos do pneumococo. Para resolver isso, a vacina Pneumo-10 liga esses polissacarídeos a uma proteína carreadora (ex: proteína D). Esse processo define uma vacina:",
+                opcoes: [
+                    { texto: "Inativada integral.", correta: false },
+                    { texto: "Subunidade Conjugada.", correta: true },
+                    { texto: "Toxoide.", correta: false },
+                    { texto: "Material Genético.", correta: false }
+                ],
+                feedback: "Isso aí! A conjugação transforma antígenos T-independentes em T-dependentes, gerando memória no lactente."
+            }
+        ];
+
+        // ---------------------------------------------------------
+        // VARIÁVEIS DE ESTADO
+        // ---------------------------------------------------------
+        let vacinaSelecionadaFase1 = null;
+        let vacinasRestantes = vacinasFase1.length;
+        let quizAtualIndex = 0;
+
+        // Elementos DOM
+        const screens = {
+            login: document.getElementById('screen-login'),
+            intro: document.getElementById('screen-intro'),
+            phase1: document.getElementById('screen-phase1'),
+            phase2: document.getElementById('screen-phase2'),
+            victory: document.getElementById('screen-victory')
+        };
+
+        const modal = {
+            container: document.getElementById('custom-modal'),
+            title: document.getElementById('modal-title'),
+            message: document.getElementById('modal-message'),
+            btn: document.getElementById('modal-btn'),
+            content: document.getElementById('modal-content')
+        };
+
+        function showScreen(screenId) {
+            Object.values(screens).forEach(s => s.classList.add('hidden-screen'));
+            screens[screenId].classList.remove('hidden-screen');
+        }
+
+        function showModal(title, message, isSuccess, callback) {
+            modal.title.textContent = title;
+            modal.message.textContent = message;
+            
+            if (isSuccess) {
+                modal.content.style.borderTopColor = 'var(--neon-green)';
+                modal.title.classList.remove('neon-text-red');
+                modal.title.classList.add('neon-text-green');
+            } else {
+                modal.content.style.borderTopColor = 'var(--neon-red)';
+                modal.title.classList.remove('neon-text-green');
+                modal.title.classList.add('neon-text-red');
+            }
+
+            modal.container.classList.remove('hidden');
+            
+            modal.btn.onclick = () => {
+                modal.container.classList.add('hidden');
+                if (callback) callback();
+            };
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        const inputs = document.querySelectorAll('.pin-input');
+        const btnUnlock = document.getElementById('btn-unlock');
+        const loginError = document.getElementById('login-error');
+
+        inputs.forEach((input, index) => {
+            input.addEventListener('input', (e) => {
+                if (e.target.value.length === 1 && index < inputs.length - 1) {
+                    inputs[index + 1].focus();
+                }
+            });
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Backspace' && e.target.value.length === 0 && index > 0) {
+                    inputs[index - 1].focus();
+                }
+            });
+        });
+
+        btnUnlock.addEventListener('click', () => {
+            let pin = '';
+            inputs.forEach(i => pin += i.value);
+            
+            if (pin === SENHA_CORRETA) {
+                showScreen('intro');
+            } else {
+                loginError.textContent = "ACESSO NEGADO. Senha incorreta.";
+                inputs.forEach(i => { i.value = ''; i.classList.add('border-[var(--neon-red)]'); });
+                setTimeout(() => {
+                    loginError.textContent = "";
+                    inputs.forEach(i => i.classList.remove('border-[var(--neon-red)]'));
+                    inputs[0].focus();
+                }, 1500);
+            }
+        });
+
+        document.getElementById('btn-start-phase1').addEventListener('click', () => {
+            initPhase1();
+            showScreen('phase1');
+        });
+
+        function initPhase1() {
+            const container = document.getElementById('vaccine-container');
+            container.innerHTML = '';
+            
+            // Embaralhar exibição
+            const vacinasEmbaralhadas = shuffleArray([...vacinasFase1]);
+
+            vacinasEmbaralhadas.forEach(vac => {
+                const el = document.createElement('div');
+                el.className = 'vaccine-item bg-gray-800 p-3 rounded-lg text-center flex flex-col justify-center items-center h-24';
+                el.dataset.id = vac.id;
+                el.dataset.category = vac.categoria;
+                
+                el.innerHTML = `
+                    <div class="font-bold text-sm text-[var(--neon-blue)]">${vac.nome}</div>
+                    <div class="text-xs text-gray-400 mt-1">${vac.desc}</div>
+                `;
+
+                el.addEventListener('click', () => selectVaccine(el));
+                container.appendChild(el);
+            });
+
+            // Adicionar listener nas categorias
+            document.querySelectorAll('.category-box').forEach(box => {
+                box.addEventListener('click', () => attemptMatch(box));
+            });
+        }
+
+        function selectVaccine(el) {
+            // Se já foi combinada, ignora
+            if (el.classList.contains('matched')) return;
+
+            // Desmarca anterior
+            document.querySelectorAll('.vaccine-item').forEach(i => i.classList.remove('selected'));
+            
+            // Marca atual
+            el.classList.add('selected');
+            vacinaSelecionadaFase1 = el;
+        }
+
+        function attemptMatch(categoryBox) {
+            if (!vacinaSelecionadaFase1) return;
+
+            const selectedCat = categoryBox.dataset.category;
+            const correctCat = vacinaSelecionadaFase1.dataset.category;
+
+            if (selectedCat === correctCat) {
+                // Acerto
+                categoryBox.classList.add('correct-flash');
+                vacinaSelecionadaFase1.classList.remove('selected');
+                vacinaSelecionadaFase1.classList.add('matched');
+                
+                setTimeout(() => categoryBox.classList.remove('correct-flash'), 500);
+                
+                vacinasRestantes--;
+                document.getElementById('vaccines-left').textContent = vacinasRestantes;
+                vacinaSelecionadaFase1 = null;
+
+                if (vacinasRestantes === 0) {
+                    setTimeout(() => {
+                        showModal("Fase 1 Concluída", "Dados estruturais reorganizados. Iniciando análise funcional avançada...", true, () => {
+                            initPhase2();
+                            showScreen('phase2');
+                        });
+                    }, 500);
+                }
+            } else {
+                // Erro
+                categoryBox.classList.add('error-flash');
+                setTimeout(() => categoryBox.classList.remove('error-flash'), 500);
+                
+                // Feedback de erro sem bloquear a tela (menos punitivo)
+            }
+        }
+
+        function initPhase2() {
+            quizAtualIndex = 0;
+            renderQuiz();
+        }
+
+        function renderQuiz() {
+            if (quizAtualIndex >= quizFase2.length) {
+                // Fim de jogo
+                showScreen('victory');
+                return;
+            }
+
+            const q = quizFase2[quizAtualIndex];
+            const container = document.getElementById('quiz-container');
+            document.getElementById('quiz-counter').textContent = `${quizAtualIndex + 1} / ${quizFase2.length}`;
+            document.getElementById('quiz-progress').style.width = `${((quizAtualIndex) / quizFase2.length) * 100}%`;
+
+            let html = `
+                <div class="mb-6">
+                    <span class="inline-block px-3 py-1 bg-[var(--neon-blue)] text-black font-bold text-xs rounded mb-3">
+                        ALVO: ${q.vacina.toUpperCase()}
+                    </span>
+                    <h3 class="text-xl font-medium text-white">${q.pergunta}</h3>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="options-container">
+            `;
+
+            // Embaralha opções da questão
+            const opcoes = shuffleArray([...q.opcoes]);
+
+            opcoes.forEach((opt, idx) => {
+                html += `
+                    <button class="quiz-option text-left p-4 rounded border border-gray-600 hover:border-[var(--neon-blue)] hover:bg-gray-800 transition-colors" data-correct="${opt.correta}">
+                        ${String.fromCharCode(65 + idx)}. ${opt.texto}
+                    </button>
+                `;
+            });
+
+            html += `</div>`;
+            container.innerHTML = html;
+
+            // Listeners
+            document.querySelectorAll('.quiz-option').forEach(btn => {
+                btn.addEventListener('click', (e) => handleQuizAnswer(btn, e, q.feedback));
+            });
+        }
+
+        function handleQuizAnswer(btn, e, feedbackMsg) {
+            // Desativa botões para evitar múltiplos cliques
+            const allBtns = document.querySelectorAll('.quiz-option');
+            allBtns.forEach(b => b.disabled = true);
+
+            const isCorrect = btn.dataset.correct === "true";
+
+            if (isCorrect) {
+                btn.classList.remove('border-gray-600', 'hover:border-[var(--neon-blue)]');
+                btn.classList.add('bg-green-900/50', 'border-[var(--neon-green)]', 'text-[var(--neon-green)]');
+                
+                setTimeout(() => {
+                    showModal("Análise Correta", feedbackMsg, true, () => {
+                        quizAtualIndex++;
+                        if(quizAtualIndex === quizFase2.length){
+                            document.getElementById('quiz-progress').style.width = `100%`;
+                        }
+                        renderQuiz();
+                    });
+                }, 400);
+
+            } else {
+                btn.classList.remove('border-gray-600');
+                btn.classList.add('bg-red-900/50', 'border-[var(--neon-red)]', 'text-[var(--neon-red)]');
+                
+                // Mostrar a correta
+                allBtns.forEach(b => {
+                    if(b.dataset.correct === "true"){
+                         b.classList.add('border-[var(--neon-green)]');
+                    }
+                });
+
+                setTimeout(() => {
+                    showModal("Erro de Processamento", "A correlação falhou. Tente analisar novamente a informação.", false, () => {
+                        // Reseta para tentar de novo (comportamento clássico de escape room educativo)
+                        renderQuiz();
+                    });
+                }, 800);
+            }
+        }
+    </script>
+</body>
+</html>
